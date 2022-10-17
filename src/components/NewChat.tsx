@@ -59,16 +59,94 @@ function Settings() {
       dark: 'white'
     }
 
+    const [value, setValue] = React.useState('')
+    const handleChange = (event) => setValue(event.target.value)
+    const [data, setData] = useState('')
     const OverlayOne = () => (
       <ModalOverlay
         bg={bgColor[colorMode]}
         backdropFilter='blur(10px)'
       />
     )
+
     const { isOpen, onOpen, onClose } = useDisclosure()
     const [overlay, setOverlay] = React.useState(<OverlayOne />)
     const {colorMode} = useColorMode()
-      
+
+    let [sign, changeSign] = useState(Boolean)
+    const [docState, setdocState] = useState()
+    const [emailState, emailsetState] = useState("")
+    React.useEffect(() => {
+      const AuthStateChange = async() => {
+        onAuthStateChanged(auth, (user) => {
+              if (user) {
+                  // User is signed in, see docs for a list of available properties
+                  // https://firebase.google.com/docs/reference/js/firebase.User
+                  const uid = user.email;
+                  changeSign(true);
+                  // ...
+              } else {
+                  // User is signed out
+                  // ...
+                  changeSign(false);
+              }
+          });
+      }
+      const userState = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            const uid = user.uid;
+            const email = user.email
+            emailsetState(email)
+          }
+      })
+      const getfromdb = async () => {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        if (userState) {
+            querySnapshot.forEach((doc) => {
+                if(emailState == doc.data().email) {
+                    setdocState(doc.data().name)
+                }
+            });
+        }
+      } 
+      AuthStateChange()
+      getfromdb()
+      userState()
+    })
+    
+    const createChatHandler = async(e) => {
+      try {
+        console.log(docState)
+        console.log(value)
+        const q = query(collection(db, "chats"));
+        const querySnapshot = await getDocs(q);
+        let a1 = true;
+        querySnapshot.forEach((doc) => {
+          console.log(value + docState + ' ' + doc.data().firstMessager + doc.data().secondMessager)
+          console.log(value + docState + ' ' + doc.data().secondMessager + doc.data().firstMessager)
+            if(value + docState == doc.data().firstMessager + doc.data().secondMessager) {
+              a1 = false
+            } 
+            if(value + docState == doc.data().secondMessager + doc.data().firstMessager) {
+              a1 = false
+            }
+        })
+
+        console.log(a1)
+        if(a1) {
+          await addDoc(collection(db, "chats"), {
+            firstMessager: docState,
+            secondMessager: value
+          });
+          a1 = false;
+          setData('')
+        } else { setData('Chat with this user is already added!') }
+      } catch (e) {
+        console.log(e)
+      }
+    }
+
+    console.log(value)
   const countries = [
     "nigeria",
     "japan",
@@ -77,7 +155,8 @@ function Settings() {
     "south korea",
   ];
     return (
-      <Box width={'80%'}> 
+      <>
+        {sign ? (<Box width={'80%'}> 
       <Button onClick={() => {
         setOverlay(<OverlayOne />)
         onOpen()
@@ -91,30 +170,34 @@ function Settings() {
         <Flex justify="center" align="center" w="full">
       <FormControl>
         <FormLabel>Select User</FormLabel>
-        <AutoComplete openOnFocus>
+        <AutoComplete onChange={vals => setValue(vals)} openOnFocus>
           <AutoCompleteInput />
           <AutoCompleteList>
             {users && users.map((el) => (
-              <AutoCompleteItem
-                key={`option-${el.email}`}
+              el.name != docState ? 
+              (<AutoCompleteItem
+                key={el.email}
                 value={el.name}
-                textTransform="capitalize"
               >
                 {el.name}
-              </AutoCompleteItem>
+              </AutoCompleteItem>) : (
+                ''
+              )
             ))}
           </AutoCompleteList>
         </AutoComplete>
-        <FormHelperText><Text color="red">fdsfsdfsd</Text></FormHelperText>
+        <FormHelperText>Choose one from the list</FormHelperText>
+        <FormHelperText><Text color={'red'}>{data}</Text></FormHelperText>
       </FormControl>
     </Flex>
         </ModalBody>
         <ModalFooter >
-          <Button>Add</Button>
+          <Button onClick={createChatHandler}>Add</Button>
         </ModalFooter>
       </ModalContent>
     </Modal>
-      </Box>
+      </Box>) : (<Text>You need to log in.</Text>)}
+      </>
     )
 }
 

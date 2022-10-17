@@ -5,12 +5,43 @@ import { AppProps } from 'next/app'
 import { useState } from 'react';
 import Head from 'next/head';
 import NextLink from 'next/link'
-
+import { setPersistence, browserSessionPersistence, signInWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { useRouter } from 'next/router';
+import {auth} from '../config/firebase'
 function MainPage() {
     const [showPassword, setShowPassword] = useState(false);
   
     const handleShowClick = () => setShowPassword(!showPassword);
     const { colorMode } = useColorMode()
+
+    const [passwordValue, setpasswordValue] = useState('')
+    const handlePassChange = (event) => setpasswordValue(event.target.value)
+
+    const [emailValue, setemailValue] = useState('')
+    const handleEmailChange = (event) => setemailValue(event.target.value)
+
+    
+    const login = (email: string, password: string) => {
+      setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        return signInWithEmailAndPassword(auth, email, password);
+      }).catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+      });
+    }
+  
+    const router = useRouter()
+    
+    const handleLogin = async (e: any) => {
+      e.preventDefault()
+      try {
+        await login(emailValue, passwordValue)
+        router.push('/')
+      } catch (err) {
+        console.log(err)
+      }
+    }
   return (
     <Center mt="100px">
         <Box w={"300px"}>
@@ -27,7 +58,9 @@ function MainPage() {
                   <InputLeftElement 
                     pointerEvents="none"
                   />
-                  <Input zIndex={0} type="email" placeholder="email address" />
+                  <Input zIndex={0} 
+                    onChange={handleEmailChange} 
+                    type="email" placeholder="email address" />
                 </InputGroup>
               </FormControl>
               <FormControl>
@@ -37,6 +70,7 @@ function MainPage() {
                     color="gray.300"
                   />
                   <Input
+                    onChange={handlePassChange} 
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                   />
@@ -53,6 +87,7 @@ function MainPage() {
                 variant="outline"
                 colorScheme="teal"
                 width="full"
+                onClick={handleLogin}
               >
                 Log in
               </Button>

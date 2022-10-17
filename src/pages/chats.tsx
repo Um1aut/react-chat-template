@@ -1,14 +1,97 @@
-import { Box, Button, Center, ChakraProvider, Flex, Heading, Text, HStack, Square, VStack, Divider, Grid, GridItem, useColorMode, useColorModeValue, Input, useDisclosure, DrawerOverlay, DrawerCloseButton, Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader, color } from '@chakra-ui/react'
+import { Box, Button, Center, ChakraProvider, Flex, Heading, Text, HStack, Square, VStack, Divider, Grid, GridItem, useColorMode, useColorModeValue, Input, useDisclosure, DrawerOverlay, DrawerCloseButton, Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader, color, Spinner } from '@chakra-ui/react'
 
 import theme from '../theme'
 import { AppProps } from 'next/app'
-import React from 'react'
+import React, { useState } from 'react'
 import Settings from '../components/NewChat'
+import { onAuthStateChanged } from 'firebase/auth'
+import { getDocs, collection, doc, orderBy, query } from 'firebase/firestore'
+import { auth, db } from '../config/firebase'
+import { useCollectionData } from 'react-firebase-hooks/firestore'
 
 function ChatPage() {
     const { isOpen, onOpen, onClose } = useDisclosure()
     const { colorMode } = useColorMode()
     const btnRef = React.useRef()
+
+    let [sign, changeSign] = useState(Boolean)
+    const [docState, setdocState] = useState()
+    const [emailState, emailsetState] = useState("")
+    React.useEffect(() => {
+      const AuthStateChange = async() => {
+        onAuthStateChanged(auth, (user) => {
+              if (user) {
+                  // User is signed in, see docs for a list of available properties
+                  // https://firebase.google.com/docs/reference/js/firebase.User
+                  const uid = user.email;
+                  changeSign(true);
+                  // ...
+              } else {
+                  // User is signed out
+                  // ...
+                  changeSign(false);
+              }
+          });
+      }
+      const userState = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            const uid = user.uid;
+            const email = user.email
+            emailsetState(email)
+          }
+      })
+      const getfromdb = async () => {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        if (userState) {
+            querySnapshot.forEach((doc) => {
+                if(emailState == doc.data().email) {
+                    setdocState(doc.data().name)
+                }
+            });
+        }
+      } 
+      AuthStateChange()
+      getfromdb()
+      userState()
+    })
+    const [chatMessagesState, setMessagesState] = useState('')
+
+    const qer = query(collection(db, "chats"));
+    const [chats] = useCollectionData(qer, {firstMessager: 'firstMessager', secondMessager: 'secondMessager'})
+  
+    const chatDoc = doc(db, "chats", chatMessagesState == "" ? ("G1GlnWYLe9QsUg4E9amT") : (chatMessagesState))
+    const chatDocRef = query(collection(chatDoc, "messages"), orderBy("date", "asc"));
+    const [chats1] = useCollectionData(chatDocRef)
+
+    console.log(chats1)
+    
+    const OpenChat = async (firstMessager, secondMessager) => {
+        const q = query(collection(db, "chats"));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            if(secondMessager + firstMessager == doc.data().firstMessager + doc.data().secondMessager) {
+                setMessagesState(doc.id)
+            } else if (firstMessager + secondMessager == doc.data().firstMessager + doc.data().secondMessager) {
+              setMessagesState(doc.id)
+            } else if(secondMessager + firstMessager == doc.data().secondMessager + doc.data().firstMessager) {
+              setMessagesState(doc.id)
+            } else if(firstMessager + secondMessager == doc.data().secondMessager + doc.data().firstMessager) {
+              setMessagesState(doc.id)
+            }
+        })
+        console.log(chatMessagesState)
+    }
+    const handleOpenChat = async (chat) => {
+      try {
+        console.log(chats1)
+        console.log("opening chat: " + chat)
+        await OpenChat(docState, chat)
+        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 500);
+      } catch (err) {
+        console.log(err)
+      }
+    }
+
   return (
     <ChakraProvider theme={theme}>
     <Center w="100%">   
@@ -20,13 +103,22 @@ function ChatPage() {
         borderColor={useColorModeValue('teal.100', 'blackAlpha.300')}
         rounded={30} w='300px' bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.50")}>
                     <Box w="100%" mt="2vh" >
-                        <Heading textAlign={'center'}>Umlaut</Heading>
+                        {sign ? <Heading textAlign={'center'}>{docState}</Heading> : <Text textAlign={'center'}>Log in at first.</Text>}
                         <Divider margin={'auto'} w={"80%"} mt='1em' mb='1em'></Divider>
                         
                         <VStack overflow={'auto'} spacing={"1vh"} display={'flex'} alignItems='center' h='70vh'>
-                                <Box as='button' p="20px" w="90%" rounded={20} bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.200")}><Text textAlign={"center"}>Umlaut</Text></Box>
-                                <Box as='button' p="20px" w="90%" rounded={20} bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.200")}><Text textAlign={"center"}>Pepuk</Text></Box>
-                                <Box as='button' p="20px" w="90%" rounded={20} bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.200")}><Text textAlign={"center"}>Artem</Text></Box>
+                            {chats && chats.map((el) =>
+                                el.firstMessager == docState && sign ? (
+                                    <Box as='button' p="20px" w="90%" onClick={() => {handleOpenChat(el.secondMessager) }} rounded={20} 
+                                    bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.200")}
+                                    ><Text textAlign={"center"}>{el.secondMessager}</Text></Box>
+                                ) : (
+                                    el.secondMessager == docState && sign ?
+                                    (<Box as='button' p="20px" w="90%" onClick={() => {handleOpenChat(el.firstMessager) }} rounded={20} 
+                                    bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.200")}
+                                    ><Text textAlign={"center"}>{el.firstMessager}</Text></Box>) : ('')
+                                    )
+                            )}
                         </VStack>
                         
                         <Flex justifyContent={'center'} ><Settings/></Flex>
@@ -64,83 +156,6 @@ function ChatPage() {
                                         p={4} 
                                         color={'white'} >'cause you're a piece of shit </Box>
                                     </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >That's so bad </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >I wanna cry </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >I wanna cry </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >I wanna cry </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >I wanna cry </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >.... </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start" pl="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >Cry cry shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >NOOOOOOO WHYY ARE YOU SO RUUDE </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start" pl="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >'cause i fucking want </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >NO NO don't do that! </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start" pl="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >yes yes my babe </Box>
-                                    </Flex>
                                 </Box>
                                 
                         </GridItem>
@@ -158,14 +173,26 @@ function ChatPage() {
             </Flex>
 
     </Center>
-        <Center display={{ md: 'none' }} mt="20%"><Box display={{ base: 'inline-block', md: 'none' }} h="88vh" w={"95%"}>
+        <Center display={{ md: 'none' }} mt="20%"><Box display={{ base: 'inline-block', md: 'none' }} h="88vh" w={"100%"}>
                 <VStack w="100%" mt="2vh" spacing={"1vh"}>
                     <Heading>Umlaut</Heading>
                     <Divider w={"80%"}></Divider>
-                    <Box onClick={onOpen} as='button' p="20px" w="90%" rounded={20} bg={colorMode == "dark" ? ("blackAlpha.300") : ("blackAlpha.200")}><Text textAlign={"center"}>Umlaut</Text></Box>
-                    <Box as='button' p="20px" w="90%" rounded={20} bg={colorMode == "dark" ? ("blackAlpha.300") : ("blackAlpha.200")}><Text textAlign={"center"}>Pepuk</Text></Box>
-                    <Box as='button' p="20px" w="90%" rounded={20} bg={colorMode == "dark" ? ("blackAlpha.300") : ("blackAlpha.200")}><Text textAlign={"center"}>Artem</Text></Box>
-
+                    {chats && chats.map((el) =>
+                                el.firstMessager == docState && sign ? (
+                                    <Box as='button' p="20px" w="90%" onClick={() => {
+                                        handleOpenChat(el.secondMessager)
+                                        onOpen()}} rounded={20} 
+                                    bg={colorMode == "dark" ? ("blackAlpha.300") : ("blackAlpha.200")}
+                                    ><Text textAlign={"center"}>{el.secondMessager}</Text></Box>
+                                ) : (
+                                    el.secondMessager == docState && sign ?
+                                    (<Box as='button' p="20px" w="90%" onClick={() => {
+                                        handleOpenChat(el.firstMessager)
+                                        onOpen()}} rounded={20} 
+                                    bg={colorMode == "dark" ? ("blackAlpha.300") : ("blackAlpha.200")}
+                                    ><Text textAlign={"center"}>{el.firstMessager}</Text></Box>) : ('')
+                                    )
+                    )}
                 </VStack>
         </Box>
         </Center>
@@ -183,104 +210,25 @@ function ChatPage() {
 
           <DrawerBody overflow={'auto'}>
                 <Box pt="10px">
+                                {chats1 && chats1.map((el)=>
+                                    el.name == docState ? (
                                     <Flex justifyContent="flex-end" >
                                         <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
+                                        bgGradient = {'linear(to-r, teal.500, blue.300)'}
                                         rounded={"19px"} 
                                         p={4} 
-                                        color={'white'} >Hey, how are you? </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >And why are you not answering me?</Box>
-                                    </Flex>
+                                        color={'white'} >{el.message} </Box>
+                                    </Flex>) : (
                                     <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >That's so bad </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >I wanna cry </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >.... </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >NOOOOOOO WHYY ARE YOU SO RUUDE </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.400, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >NO NO don't do that! </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start"  >
-                                        <Box mb="5px" 
-                                        bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={colorMode == 'dark' ? 'white' : 'black'} >'cause you're a piece of shit </Box>
-                                    </Flex>
+                                            <Box mb="5px" 
+                                            bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, purple.800)'}
+                                            rounded={"19px"} 
+                                            p={4} 
+                                            color={colorMode == 'dark' ? 'white' : 'black'} >{el.message}</Box>
+                                        </Flex>
+                                        )
+                                    )}
+                                    
                                 </Box>
           </DrawerBody>
 

@@ -32,9 +32,48 @@ import {
 
 import { DarkModeSwitch } from '../components/DarkModeSwitch'
 import NextLink from 'next/link'
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { getDocs, collection } from 'firebase/firestore';
+import React, { useState } from 'react';
+import { auth, db } from '../config/firebase';
+import { useRouter } from 'next/router';
+
+
 
 const NavBar = () => {
     const { colorMode } = useColorMode()
+
+    const [docState, setdocState] = useState()
+    const [emailState, emailsetState] = useState("")
+
+    const usera = auth.currentUser
+    let [sign, changeSign] = useState(Boolean)
+    React.useEffect(() => {
+        const AuthStateChange = async() => {
+            await onAuthStateChanged(auth, (user) => {
+              if (user) {
+                // User is signed in, see docs for a list of available properties
+                // https://firebase.google.com/docs/reference/js/firebase.User
+                const uid = user.uid;
+                changeSign(true)
+                // ...
+              } else {
+                // User is signed out
+                // ...
+                changeSign(false)
+              }
+            });
+        }
+        AuthStateChange()
+    })
+  const router = useRouter()
+function signout(auth) {
+    signOut(auth).then(() => {
+      router.push('/')
+    }).catch((error) => {
+      console.log(error)
+    });
+}
     return(
     <Box>
         <Flex
@@ -66,9 +105,23 @@ const NavBar = () => {
                 <Box>
                     <HStack spacing={2}>
                         <NextLink href="/login">
-                            <Button display={{ md: 'inline-block', base: 'none' }} variant={"outline"} rounded={15} colorScheme='teal'>
-                                Log in
-                            </Button>
+                            {sign ? (
+                            <Button display={{ md: 'inline-block', base: 'none' }} 
+                            variant={"outline"} 
+                            rounded={15} 
+                            colorScheme='teal'
+                            onClick={() => {
+                                signout(auth)
+                            }}>
+                                Log Out
+                            </Button>) : (
+                            <Button display={{ md: 'inline-block', base: 'none' }}
+                             variant={"outline"} 
+                             rounded={15} 
+                             colorScheme='teal'
+                             >
+                                Log In
+                            </Button>)}
                         </NextLink>
                         <DarkModeSwitch />
                     </HStack>

@@ -5,10 +5,50 @@ import { AppProps } from 'next/app'
 import { useState } from 'react';
 import Head from 'next/head';
 import NextLink from 'next/link'
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { addDoc, collection } from 'firebase/firestore';
+import { db, auth } from '../config/firebase';
+import { useRouter } from 'next/router';
 
 function MainPage() {
     const [showPassword, setShowPassword] = useState(false);
   
+    const [passwordValue, setpasswordValue] = useState('')
+    const handlePassChange = (event) => setpasswordValue(event.target.value)
+
+    const [emailValue, setemailValue] = useState('')
+    const handleEmailChange = (event) => setemailValue(event.target.value)
+
+    const [userNameValue, setuserNameValue] = useState('')
+    const handleUserNameChange = (event) => setuserNameValue(event.target.value)
+
+    const signup = async (email: string, password: string, name: string) => {
+      try {
+          const docRef = await addDoc(collection(db, "users"), {
+            name: name,
+            email: email
+          });
+          console.log("Document written with ID: ", docRef.id);
+        } catch (e) {
+          console.error("Error adding document: ", e);
+        }
+      return (
+          createUserWithEmailAndPassword(auth, email, password)
+      )
+    }
+
+    const router = useRouter()
+
+    const handleSignUp = async (e: any) => {
+      e.preventDefault()
+      try {
+        await signup(emailValue, passwordValue, userNameValue)
+        router.push('/')
+      } catch (err) {
+        console.log(err)
+      }
+    }
+
     const handleShowClick = () => setShowPassword(!showPassword);
     const { colorMode } = useColorMode()
   return (
@@ -24,29 +64,21 @@ function MainPage() {
             >
               <FormControl>
                 <InputGroup>
-                  <InputLeftElement
-                    pointerEvents="none"
-                  />
-                  <Input zIndex={-1} type="email" placeholder="email address" />
+                  <Input type="email" onChange={handleEmailChange} required placeholder="umlaut@umlaut.com" />
                 </InputGroup>
               </FormControl>
               <FormControl>
                 <InputGroup>
-                  <InputLeftElement
-                    pointerEvents="none"
-                  />
-                  <Input zIndex={-1} placeholder="UserName" />
+                  <Input onChange={handleUserNameChange} required placeholder="@Umlaut" />
                 </InputGroup>
               </FormControl>
               <FormControl>
                 <InputGroup>
-                  <InputLeftElement
-                    pointerEvents="none"
-                    color="gray.300"
-                  />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Password"
+                    placeholder="password"
+                    required
+                    onChange={handlePassChange}
                   />
                   <InputRightElement width="4.5rem">
                     <Button h="1.75rem" size="sm" onClick={handleShowClick}>
@@ -61,6 +93,7 @@ function MainPage() {
                 variant="outline"
                 colorScheme="teal"
                 width="full"
+                onClick={handleSignUp}
               >
                 Sign up
               </Button>
