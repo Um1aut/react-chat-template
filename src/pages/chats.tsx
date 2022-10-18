@@ -37,7 +37,7 @@ function ChatPage() {
     const [colorState, setColorState] = useState()
     const [emailState, emailsetState] = useState("")
     React.useEffect(() => {
-      setVh(window.innerHeight)
+      setTimeout(() => setVh(window.innerHeight), 200);
       console.log(vh)
       setTimeout(() => setLoading(false), 2000);
       setTimeout(() => setSelectorloading(false), 500);
