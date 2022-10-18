@@ -23,6 +23,7 @@ function ChatPage() {
     const [loading, setLoading] = useState(true)
     const [Selectorloading, setSelectorloading] = useState(true)
 
+    const [vh, setVh] = useState<number>(100)
 
     const scrollToBottom = useScrollToBottom();
     const [sticky] = useSticky();
@@ -36,6 +37,8 @@ function ChatPage() {
     const [colorState, setColorState] = useState()
     const [emailState, emailsetState] = useState("")
     React.useEffect(() => {
+      setVh(window.innerHeight)
+      console.log(vh)
       setTimeout(() => setLoading(false), 2000);
       setTimeout(() => setSelectorloading(false), 500);
       const AuthStateChange = async() => {
@@ -213,7 +216,7 @@ function ChatPage() {
                                                     docState == el.name ? ('') : (el.name)
                                                     }</Text><Text fontSize={15} textAlign={'right'}>{el.message}</Text>
                                                     <Text fontSize={12} textAlign={'right'}>
-                                {parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
+                                {parseInt(el.dateForMessage) - curDate < 24 ? (parseInt(el.dateForMessage) - curDate) : (parseInt(el.dateForMessage) - curDate -24)} {":" + el.dateForMessageMinutes}</Text>
                                                 </Box>
                                             </Flex>
                                             </Fade>) : (
@@ -227,7 +230,7 @@ function ChatPage() {
                                                         docState == el.name ? ('') : (el.name)
                                                         }</Text><Text fontSize={15} textAlign={docState == el.name ? ('right') : ('left')}>{el.message}</Text>
                                                         <Text fontSize={12} 
-                                textAlign={docState == el.name ? ('right') : ('left')}>{parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
+                                textAlign={docState == el.name ? ('right') : ('left')}>{parseInt(el.dateForMessage) - curDate < 24 ? (parseInt(el.dateForMessage) - curDate) : (parseInt(el.dateForMessage) - curDate -24)}</Text>
                                                     </Box>
                                                 </Flex>
                                                 )
@@ -290,12 +293,12 @@ function ChatPage() {
         
       >
         <DrawerOverlay />
-        <DrawerContent bg={colorMode == 'dark' ? "black" : "white"}>
+        <DrawerContent height={vh.toString() + "px"} bg={colorMode == 'dark' ? "black" : "white"}>
           <DrawerCloseButton />
           <DrawerHeader>{chatUser}</DrawerHeader>
             <DrawerBody>
-            {!loading ? (
-                                        chats1 && chats1.map((el)=>
+            {!loading ? (   <ScrollToBottom className={ROOT_CSS1}>
+                                        {chats1 && chats1.map((el)=>
                                         el.name == docState ? (
                                             <Fade in>
                                         <Flex justifyContent="flex-end" >
@@ -332,7 +335,8 @@ function ChatPage() {
                                                 </Box>
                                             </Flex>
                                             )
-                                        )
+                                        )}
+                                        </ScrollToBottom>
                 ) : (
                     <Spinner pos='absolute' top='50%' right={'45%'} size='lg'/>
                 )}
