@@ -287,14 +287,15 @@ function ChatPage() {
         onClose={onClose}
         finalFocusRef={btnRef}
         size='full'
+        
       >
         <DrawerOverlay />
         <DrawerContent bg={colorMode == 'dark' ? "black" : "white"}>
           <DrawerCloseButton />
           <DrawerHeader>{chatUser}</DrawerHeader>
-            <DrawerBody h={'80vh'}>
-            {!loading ? (<ScrollToBottom className={ROOT_CSS}>
-                                        {chats1 && chats1.map((el)=>
+            <DrawerBody>
+            {!loading ? (
+                                        chats1 && chats1.map((el)=>
                                         el.name == docState ? (
                                             <Fade in>
                                         <Flex justifyContent="flex-end" >
@@ -331,8 +332,8 @@ function ChatPage() {
                                                 </Box>
                                             </Flex>
                                             )
-                                        )}
-                </ScrollToBottom>) : (
+                                        )
+                ) : (
                     <Spinner pos='absolute' top='50%' right={'45%'} size='lg'/>
                 )}
                 </DrawerBody>
