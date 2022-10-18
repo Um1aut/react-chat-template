@@ -4,7 +4,6 @@ import { useRouter } from 'next/router'
 
 export const DarkModeSwitch = () => {
   const { colorMode, toggleColorMode } = useColorMode()
-  const router = useRouter()
   const isDark = colorMode === 'dark'
   return (
     <IconButton
@@ -14,7 +13,6 @@ export const DarkModeSwitch = () => {
       rounded={30}
       onClick={() => {
         toggleColorMode()
-        router.reload()
       }}
       colorScheme='teal'
     />

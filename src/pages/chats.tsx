@@ -255,7 +255,7 @@ function ChatPage() {
             </Flex>
 
     </Center>
-        <Center display={{ md: 'none' }} mt="20%"><Box display={{ base: 'inline-block', md: 'none' }} h="88vh" w={"100%"}>
+        <Center display={{ md: 'none' }} mt="20%"><Box display={{ base: 'inline-block', md: 'none' }} h="80vh" w={"100%"}>
                 <VStack w="100%" mt="2vh" spacing={"1vh"}>
                     <Heading>{docState}</Heading>
                     <Divider w={"80%"}></Divider>
@@ -292,7 +292,7 @@ function ChatPage() {
         <DrawerContent bg={colorMode == 'dark' ? "black" : "white"}>
           <DrawerCloseButton />
           <DrawerHeader>{chatUser}</DrawerHeader>
-            <DrawerBody>
+            <DrawerBody h={'80vh'}>
             {!loading ? (<ScrollToBottom className={ROOT_CSS}>
                                         {chats1 && chats1.map((el)=>
                                         el.name == docState ? (
@@ -302,10 +302,11 @@ function ChatPage() {
                                             bgGradient = {'linear(to-l, teal.500,'  + colorState + " 180%" + ')'}
                                             rounded={"27px"} 
                                             p={4} 
-                                            color={'white'}>
+                                            color={'white'}
+                                            maxW={'300px'}>
                                                 <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
                                                 docState == el.name ? ('') : (el.name)
-                                                }</Text><Text fontSize={15} textAlign={'right'}>{el.message}</Text>
+                                                }</Text><Text fontSize={15}>{el.message}</Text>
                                                 <Text fontSize={12} textAlign={'right'}>{parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
                                             </Box>
                                         </Flex>
@@ -316,6 +317,7 @@ function ChatPage() {
                                                 : 'linear(to-r, purple.900, purple.800)'}
                                                 rounded={"27px"} 
                                                 p={4} 
+                                                maxW={'300px'}
                                                 color={colorMode == 'dark' ? 'white' : 'black'} >
                                                     <Text pb={docState == el.name ? ("0px") : ('5px')} 
                                                     fontSize={"12px"} color={colorMode}>{
@@ -336,9 +338,8 @@ function ChatPage() {
                 </DrawerBody>
 
           <DrawerFooter>
-          <Input value={messageValue} onChange={handleMessageChange} placeholder='Type here...' mr='20px' />
-          <Button onClick={
-                                    handleMessage} variant={'solid'} colorScheme='teal'>Send</Button>
+            <Input value={messageValue} onChange={handleMessageChange} placeholder='Type here...' mr='20px' />
+            <Button onClick={handleMessage} variant={'solid'} colorScheme='teal'>Send</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
