@@ -1,8 +1,10 @@
 import { useColorMode, IconButton } from '@chakra-ui/react'
 import { SunIcon, MoonIcon } from '@chakra-ui/icons'
+import { useRouter } from 'next/router'
 
 export const DarkModeSwitch = () => {
   const { colorMode, toggleColorMode } = useColorMode()
+  const router = useRouter()
   const isDark = colorMode === 'dark'
   return (
     <IconButton
@@ -10,7 +12,10 @@ export const DarkModeSwitch = () => {
       aria-label="Toggle Theme"
       variant={"outline"}
       rounded={30}
-      onClick={toggleColorMode}
+      onClick={() => {
+        toggleColorMode()
+        router.reload()
+      }}
       colorScheme='teal'
     />
   )

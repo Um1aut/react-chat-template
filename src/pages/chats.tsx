@@ -1,23 +1,45 @@
-import { Box, Button, Center, ChakraProvider, Flex, Heading, Text, HStack, Square, VStack, Divider, Grid, GridItem, useColorMode, useColorModeValue, Input, useDisclosure, DrawerOverlay, DrawerCloseButton, Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader, color, Spinner } from '@chakra-ui/react'
-
+import { Box, Button, Center, ChakraProvider, Flex, Heading, Text, HStack, Square, VStack, Divider, Grid, GridItem, useColorMode, useColorModeValue, Input, useDisclosure, DrawerOverlay, DrawerCloseButton, Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader, color, Spinner, chakra, shouldForwardProp, Fade, FormControl } from '@chakra-ui/react'
+import { css } from '@emotion/css';
 import theme from '../theme'
 import { AppProps } from 'next/app'
 import React, { useState } from 'react'
 import Settings from '../components/NewChat'
 import { onAuthStateChanged } from 'firebase/auth'
-import { getDocs, collection, doc, orderBy, query } from 'firebase/firestore'
+import { getDocs, collection, doc, orderBy, query, addDoc, limit } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
+import ScrollToBottom, {useScrollToBottom, useSticky} from 'react-scroll-to-bottom';
 
+import Anim from '../components/AnimComponent'
+
+const ROOT_CSS = css({
+    position: 'absolute',
+    width: '100%',
+    height: '100%'
+  });
+
+  const ROOT_CSS1 = css({
+    height: '100%'
+  });
 function ChatPage() {
+    const [loading, setLoading] = useState(true)
+    const [Selectorloading, setSelectorloading] = useState(true)
+
+
+    const scrollToBottom = useScrollToBottom();
+    const [sticky] = useSticky();
+
     const { isOpen, onOpen, onClose } = useDisclosure()
     const { colorMode } = useColorMode()
     const btnRef = React.useRef()
 
     let [sign, changeSign] = useState(Boolean)
     const [docState, setdocState] = useState()
+    const [colorState, setColorState] = useState()
     const [emailState, emailsetState] = useState("")
     React.useEffect(() => {
+      setTimeout(() => setLoading(false), 2000);
+      setTimeout(() => setSelectorloading(false), 500);
       const AuthStateChange = async() => {
         onAuthStateChanged(auth, (user) => {
               if (user) {
@@ -45,6 +67,7 @@ function ChatPage() {
         if (userState) {
             querySnapshot.forEach((doc) => {
                 if(emailState == doc.data().email) {
+                    setColorState(doc.data().color)
                     setdocState(doc.data().name)
                 }
             });
@@ -55,14 +78,14 @@ function ChatPage() {
       userState()
     })
     const [chatMessagesState, setMessagesState] = useState('')
+    const [chatUser, setChatUser] = useState('')
 
     const qer = query(collection(db, "chats"));
     const [chats] = useCollectionData(qer, {firstMessager: 'firstMessager', secondMessager: 'secondMessager'})
-  
+
     const chatDoc = doc(db, "chats", chatMessagesState == "" ? ("G1GlnWYLe9QsUg4E9amT") : (chatMessagesState))
     const chatDocRef = query(collection(chatDoc, "messages"), orderBy("date", "asc"));
-    const [chats1] = useCollectionData(chatDocRef)
-
+    let [chats1] = useCollectionData(chatDocRef)
     console.log(chats1)
     
     const OpenChat = async (firstMessager, secondMessager) => {
@@ -83,14 +106,51 @@ function ChatPage() {
     }
     const handleOpenChat = async (chat) => {
       try {
+        setChatUser(chat)
         console.log(chats1)
         console.log("opening chat: " + chat)
         await OpenChat(docState, chat)
-        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 500);
       } catch (err) {
         console.log(err)
       }
     }
+
+    const [messageValue, setmessageValue] = useState('')
+    const handleMessageChange = (event) => setmessageValue(event.target.value)
+
+    const sendMessage = async (name, message) => {
+        try {
+            const n = new Date().getMinutes()
+            let p
+            if(n<10) {
+                p = '0' + n.toString()
+            } else p=n
+            console.log(n + " " + p)
+            const docRef = await addDoc(collection(chatDoc, "messages"), {
+              name: name,
+              message: message,
+              date: new Date().getTime(),
+              dateForMessage: new Date().getHours().toString() + ":" + p.toString()
+            });
+            console.log("Document written with ID: ", docRef.id);
+          } catch (e) {
+            console.error("Error adding document: ", e);
+          }
+      }
+
+      const handleMessage = async (event) => {
+        event.preventDefault()
+        try {
+            if(messageValue != '' && messageValue.length < 150) {
+                window.scrollTo(0, document.body.scrollHeight);
+                setmessageValue('')
+                await sendMessage(docState, messageValue)
+            }
+        } catch (err) {
+          console.log(err)
+        }
+      }
+    
 
   return (
     <ChakraProvider theme={theme}>
@@ -102,14 +162,16 @@ function ChatPage() {
         borderStyle={'solid'}
         borderColor={useColorModeValue('teal.100', 'blackAlpha.300')}
         rounded={30} w='300px' bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.50")}>
-                    <Box w="100%" mt="2vh" >
+                    {!Selectorloading ? (
+                        <Box w="100%" mt="2vh" >
                         {sign ? <Heading textAlign={'center'}>{docState}</Heading> : <Text textAlign={'center'}>Log in at first.</Text>}
                         <Divider margin={'auto'} w={"80%"} mt='1em' mb='1em'></Divider>
                         
                         <VStack overflow={'auto'} spacing={"1vh"} display={'flex'} alignItems='center' h='70vh'>
                             {chats && chats.map((el) =>
                                 el.firstMessager == docState && sign ? (
-                                    <Box as='button' p="20px" w="90%" onClick={() => {handleOpenChat(el.secondMessager) }} rounded={20} 
+                                    <Box as='button' p="20px" w="90%" onClick={() => {handleOpenChat(el.secondMessager) 
+                                        }} rounded={20} 
                                     bg={colorMode == "dark" ? ("blackAlpha.100") : ("blackAlpha.200")}
                                     ><Text textAlign={"center"}>{el.secondMessager}</Text></Box>
                                 ) : (
@@ -121,8 +183,9 @@ function ChatPage() {
                             )}
                         </VStack>
                         
-                        <Flex justifyContent={'center'} ><Settings/></Flex>
+                        <Flex ml='3vh'><Settings/></Flex>
                     </Box>
+                    ) : (<Spinner margin={'auto'} size='lg'/>)}
                 </Flex>
                 <Flex 
         border={1}
@@ -134,38 +197,53 @@ function ChatPage() {
                     gap={1}
                     >
                         <GridItem overflow={'auto'} rounded={30} bg={useColorModeValue('blackAlpha.50', 'blackAlpha.50')} w="100vh" h="79vh">
-                                <Box pt="10px">
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >Hey, how are you? </Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-end" pr="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.500)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >And why are you not answering me?</Box>
-                                    </Flex>
-                                    <Flex justifyContent="flex-start" pl="15px" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, purple.900, gray.900)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >'cause you're a piece of shit </Box>
-                                    </Flex>
-                                </Box>
-                                
+                            {!loading ? (<ScrollToBottom className={ROOT_CSS1}>
+                                            {chats1 && chats1.map((el)=>
+                                            el.name == docState ? (
+                                                <Fade in>
+                                            <Flex justifyContent="flex-end" >
+                                                <Box mb="5px" mr={docState == el.name ? ("5") : ('0')} 
+                                                bgGradient = {'linear(to-l, teal.500,'  + colorState + " 180%" + ')'}
+                                                rounded={"27px"} 
+                                                p={4} 
+                                                color={'white'}>
+                                                    <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
+                                                    docState == el.name ? ('') : (el.name)
+                                                    }</Text><Text fontSize={15} textAlign={'right'}>{el.message}</Text>
+                                                    <Text fontSize={12} textAlign={'right'}>{el.dateForMessage}</Text>
+                                                </Box>
+                                            </Flex>
+                                            </Fade>) : (
+                                            <Flex justifyContent="flex-start"  >
+                                                    <Box mb="5px"  ml={docState == el.name ? ("0") : ('5')}
+                                                    bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, purple.800)'}
+                                                    rounded={"27px"} 
+                                                    p={4} 
+                                                    color={colorMode == 'dark' ? 'white' : 'black'} >
+                                                        <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
+                                                        docState == el.name ? ('') : (el.name)
+                                                        }</Text><Text fontSize={15} textAlign={docState == el.name ? ('right') : ('left')}>{el.message}</Text>
+                                                        <Text fontSize={12} textAlign={docState == el.name ? ('right') : ('left')}>{el.dateForMessage}</Text>
+                                                    </Box>
+                                                </Flex>
+                                                )
+                                            )}
+                                            </ScrollToBottom>) : (
+                                                <Spinner pos='absolute' top='50%' right={'40%'} size='lg'/>
+                                            )}
                         </GridItem>
                         <GridItem p={2} rounded={20} bg={useColorModeValue('blackAlpha.200', 'blackAlpha.200')} h="6vh"> 
-                            <HStack>
-                                <Input rounded={20} placeholder='Message...' variant={"filled"} colorScheme={'teal'}/>
-                                <Button rounded={20} variant={'outline'} colorScheme={useColorModeValue('blue', 'teal')}>
+                            
+                                <form
+                                onSubmit={
+                                    handleMessage}>
+                                    <HStack><Input value={messageValue} onChange={handleMessageChange} rounded={20} placeholder='Message...' variant={"filled"} colorScheme={'teal'}/>
+                                    <Button type='submit' onClick={
+                                    handleMessage}rounded={20} variant={'outline'} colorScheme={useColorModeValue('blue', 'teal')}>
                                    Send
-                                </Button>
-                            </HStack>
+                                    </Button>
+                                    </HStack>
+                                </form>
                         </GridItem>
                     </Grid>
                 </Flex>
@@ -175,9 +253,10 @@ function ChatPage() {
     </Center>
         <Center display={{ md: 'none' }} mt="20%"><Box display={{ base: 'inline-block', md: 'none' }} h="88vh" w={"100%"}>
                 <VStack w="100%" mt="2vh" spacing={"1vh"}>
-                    <Heading>Umlaut</Heading>
+                    <Heading>{docState}</Heading>
                     <Divider w={"80%"}></Divider>
-                    {chats && chats.map((el) =>
+                    {!loading ? (
+                        chats && chats.map((el) =>
                                 el.firstMessager == docState && sign ? (
                                     <Box as='button' p="20px" w="90%" onClick={() => {
                                         handleOpenChat(el.secondMessager)
@@ -192,7 +271,9 @@ function ChatPage() {
                                     bg={colorMode == "dark" ? ("blackAlpha.300") : ("blackAlpha.200")}
                                     ><Text textAlign={"center"}>{el.firstMessager}</Text></Box>) : ('')
                                     )
+                    )) : (                        <Spinner pos='absolute' top='50%' right={'45%'} size='lg'/>
                     )}
+                    <Flex pos='absolute' bottom={0}><Settings/></Flex>
                 </VStack>
         </Box>
         </Center>
@@ -206,35 +287,48 @@ function ChatPage() {
         <DrawerOverlay />
         <DrawerContent bg={colorMode == 'dark' ? "black" : "white"}>
           <DrawerCloseButton />
-          <DrawerHeader>Umlaut</DrawerHeader>
-
-          <DrawerBody overflow={'auto'}>
-                <Box pt="10px">
-                                {chats1 && chats1.map((el)=>
-                                    el.name == docState ? (
-                                    <Flex justifyContent="flex-end" >
-                                        <Box mb="5px" 
-                                        bgGradient = {'linear(to-r, teal.500, blue.300)'}
-                                        rounded={"19px"} 
-                                        p={4} 
-                                        color={'white'} >{el.message} </Box>
-                                    </Flex>) : (
-                                    <Flex justifyContent="flex-start"  >
+          <DrawerHeader>{chatUser}</DrawerHeader>
+            <DrawerBody>
+            {!loading ? (<ScrollToBottom className={ROOT_CSS}>
+                                        {chats1 && chats1.map((el)=>
+                                        el.name == docState ? (
+                                            <Fade in>
+                                        <Flex justifyContent="flex-end" >
                                             <Box mb="5px" 
-                                            bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, purple.800)'}
-                                            rounded={"19px"} 
+                                            bgGradient = {'linear(to-l, teal.500,'  + colorState + " 180%" + ')'}
+                                            rounded={"27px"} 
                                             p={4} 
-                                            color={colorMode == 'dark' ? 'white' : 'black'} >{el.message}</Box>
+                                            color={'white'}>
+                                                <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
+                                                docState == el.name ? ('') : (el.name)
+                                                }</Text><Text fontSize={15} textAlign={'right'}>{el.message}</Text>
+                                                <Text fontSize={12} textAlign={'right'}>{el.dateForMessage}</Text>
+                                            </Box>
                                         </Flex>
-                                        )
-                                    )}
-                                    
-                                </Box>
-          </DrawerBody>
+                                        </Fade>) : (
+                                        <Flex justifyContent="flex-start"  >
+                                                <Box mb="5px" 
+                                                bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, purple.800)'}
+                                                rounded={"27px"} 
+                                                p={4} 
+                                                color={colorMode == 'dark' ? 'white' : 'black'} >
+                                                    <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
+                                                    docState == el.name ? ('') : (el.name)
+                                                    }</Text><Text fontSize={15} textAlign={docState == el.name ? ('right') : ('left')}>{el.message}</Text>
+                                                    <Text fontSize={12} textAlign={docState == el.name ? ('right') : ('left')}>{el.dateForMessage}</Text>
+                                                </Box>
+                                            </Flex>
+                                            )
+                                        )}
+                </ScrollToBottom>) : (
+                    <Spinner pos='absolute' top='50%' right={'45%'} size='lg'/>
+                )}
+                </DrawerBody>
 
           <DrawerFooter>
-          <Input placeholder='Type here...' mr='20px' />
-            <Button variant={'solid'} colorScheme='teal'>Send</Button>
+          <Input value={messageValue} onChange={handleMessageChange} placeholder='Type here...' mr='20px' />
+          <Button onClick={
+                                    handleMessage} variant={'solid'} colorScheme='teal'>Send</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

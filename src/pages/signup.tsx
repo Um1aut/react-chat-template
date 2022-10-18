@@ -10,6 +10,8 @@ import { addDoc, collection } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { useRouter } from 'next/router';
 
+import randomColor from "randomcolor";
+
 function MainPage() {
     const [showPassword, setShowPassword] = useState(false);
   
@@ -24,9 +26,11 @@ function MainPage() {
 
     const signup = async (email: string, password: string, name: string) => {
       try {
+          let color = randomColor();
           const docRef = await addDoc(collection(db, "users"), {
             name: name,
-            email: email
+            email: email,
+            color: color
           });
           console.log("Document written with ID: ", docRef.id);
         } catch (e) {

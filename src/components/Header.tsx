@@ -135,9 +135,16 @@ function signout(auth) {
                     aria-label="Options"
                 />
                 <MenuList  zIndex={2}>
-                    <NextLink href="/login" passHref>
-                        <MenuItem as={Link}>Log in</MenuItem>
-                    </NextLink>
+                        {sign ? (
+                            <NextLink href="/" passHref>
+                                <MenuItem
+                            onClick={() => {
+                                signout(auth)
+                            }} as={Link}>Log Out</MenuItem>
+                            </NextLink>) : (
+                            <NextLink href="/login" passHref>
+                                <MenuItem as={Link}>Log in</MenuItem>
+                            </NextLink>)}
                     <NextLink href="/chats" passHref>
                         <MenuItem  as={Link}>Chats</MenuItem>
                     </NextLink>

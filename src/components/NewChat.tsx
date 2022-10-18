@@ -160,7 +160,7 @@ function Settings() {
       <Button onClick={() => {
         setOverlay(<OverlayOne />)
         onOpen()
-      }} mt="2" variant="outline" h='1.75rem' w="100%" size='sm'>Add New Chat</Button>
+      }} mt="2" m={5} variant="outline" h='1.75rem' w="100%" size='sm'>Add New Chat</Button>
     <Modal isCentered isOpen={isOpen} onClose={onClose}>
       {overlay}
       <ModalContent >
