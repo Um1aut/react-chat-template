@@ -10,8 +10,6 @@ import { auth, db } from '../config/firebase'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
 import ScrollToBottom, {useScrollToBottom, useSticky} from 'react-scroll-to-bottom';
 
-import Anim from '../components/AnimComponent'
-
 const ROOT_CSS = css({
     position: 'absolute',
     width: '100%',
@@ -81,7 +79,7 @@ function ChatPage() {
     const [chatUser, setChatUser] = useState('')
 
     const qer = query(collection(db, "chats"));
-    const [chats] = useCollectionData(qer, {firstMessager: 'firstMessager', secondMessager: 'secondMessager'})
+    const [chats] = useCollectionData(qer, {})
 
     const chatDoc = doc(db, "chats", chatMessagesState == "" ? ("G1GlnWYLe9QsUg4E9amT") : (chatMessagesState))
     const chatDocRef = query(collection(chatDoc, "messages"), orderBy("date", "asc"));
@@ -117,7 +115,10 @@ function ChatPage() {
 
     const [messageValue, setmessageValue] = useState('')
     const handleMessageChange = (event) => setmessageValue(event.target.value)
-
+    
+    const curDate = new Date().getTimezoneOffset() / 60
+    console.log(curDate)
+    
     const sendMessage = async (name, message) => {
         try {
             const n = new Date().getMinutes()
@@ -130,7 +131,8 @@ function ChatPage() {
               name: name,
               message: message,
               date: new Date().getTime(),
-              dateForMessage: new Date().getHours().toString() + ":" + p.toString()
+              dateForMessage: new Date().getUTCHours().toString(), 
+              dateForMessageMinutes: p.toString()
             });
             console.log("Document written with ID: ", docRef.id);
           } catch (e) {
@@ -210,7 +212,8 @@ function ChatPage() {
                                                     <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
                                                     docState == el.name ? ('') : (el.name)
                                                     }</Text><Text fontSize={15} textAlign={'right'}>{el.message}</Text>
-                                                    <Text fontSize={12} textAlign={'right'}>{el.dateForMessage}</Text>
+                                                    <Text fontSize={12} textAlign={'right'}>
+                                {parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
                                                 </Box>
                                             </Flex>
                                             </Fade>) : (
@@ -223,7 +226,8 @@ function ChatPage() {
                                                         <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
                                                         docState == el.name ? ('') : (el.name)
                                                         }</Text><Text fontSize={15} textAlign={docState == el.name ? ('right') : ('left')}>{el.message}</Text>
-                                                        <Text fontSize={12} textAlign={docState == el.name ? ('right') : ('left')}>{el.dateForMessage}</Text>
+                                                        <Text fontSize={12} 
+                                textAlign={docState == el.name ? ('right') : ('left')}>{parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
                                                     </Box>
                                                 </Flex>
                                                 )
@@ -302,20 +306,26 @@ function ChatPage() {
                                                 <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
                                                 docState == el.name ? ('') : (el.name)
                                                 }</Text><Text fontSize={15} textAlign={'right'}>{el.message}</Text>
-                                                <Text fontSize={12} textAlign={'right'}>{el.dateForMessage}</Text>
+                                                <Text fontSize={12} textAlign={'right'}>{parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
                                             </Box>
                                         </Flex>
                                         </Fade>) : (
                                         <Flex justifyContent="flex-start"  >
                                                 <Box mb="5px" 
-                                                bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)' : 'linear(to-r, purple.900, purple.800)'}
+                                                bgGradient = {colorMode == 'light' ? 'linear(to-r, gray.100, gray.300)'
+                                                : 'linear(to-r, purple.900, purple.800)'}
                                                 rounded={"27px"} 
                                                 p={4} 
                                                 color={colorMode == 'dark' ? 'white' : 'black'} >
-                                                    <Text pb={docState == el.name ? ("0px") : ('5px')} fontSize={"12px"} color={colorMode}>{
+                                                    <Text pb={docState == el.name ? ("0px") : ('5px')} 
+                                                    fontSize={"12px"} color={colorMode}>{
                                                     docState == el.name ? ('') : (el.name)
-                                                    }</Text><Text fontSize={15} textAlign={docState == el.name ? ('right') : ('left')}>{el.message}</Text>
-                                                    <Text fontSize={12} textAlign={docState == el.name ? ('right') : ('left')}>{el.dateForMessage}</Text>
+                                                    }</Text><Text fontSize={15} 
+                                                     textAlign={docState == el.name ? ('right') :
+                                                    ('left')}>{el.message}</Text>
+                                                    <Text fontSize={12} 
+                                                   textAlign={docState == el.name ? ('right') : 
+                                                    ('left')}>{parseInt(el.dateForMessage) - curDate} {":" + el.dateForMessageMinutes}</Text>
                                                 </Box>
                                             </Flex>
                                             )
